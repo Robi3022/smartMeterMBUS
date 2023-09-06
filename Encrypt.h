@@ -3,8 +3,10 @@
 #define ENCRYPT_H_
 
 
-#include "mbedtls/gcm.h"
+
+#include <stdint.h>
 #include <vector>
+#include "mbedtls/gcm.h"
 
 
 namespace MBus
@@ -13,7 +15,7 @@ namespace MBus
 	{
 		public:
 			DlmsMeter(const std::vector<uint8_t>& data, const std::vector<uint8_t>& key);
-			int loop();
+			int processData();
 
 		private:
 			const std::vector<uint8_t>& receiveBuffer; // Stores the packet currently being received
@@ -26,6 +28,9 @@ namespace MBus
 			int getMBusPayload(std::vector<uint8_t> & mbusPayload);
 			int decryptData(std::vector<uint8_t> &mbusPayload, uint8_t* &plaintext, uint16_t &messageLength );
 			int printOutData(uint8_t* plaintext, uint16_t messageLength);
+			int printDoubleLong(uint8_t* plaintext, uint8_t index);
+			int printLong(uint8_t* plaintext, uint8_t index);
+			int printString(uint8_t* plaintext, uint8_t index);
 	};
 }
 

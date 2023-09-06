@@ -1,6 +1,6 @@
 PROJECT_ROOT = $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
-OBJS = Converter.o Encrypt.o
+OBJS = Converter.o Encrypt.o MBusPackage.o
 
 
 ifeq ($(BUILD_MODE),debug)

@@ -1,12 +1,11 @@
+
 #include "Encrypt.h"
-#include "espdm_mbus.h"
-#include "espdm_dlms.h"
-#include "espdm_obis.h"
+
 #include <cstring>
 #include <iostream>
 #include <vector>
-
-
+#include "MBusDefines.h"
+#include "ObisCodes.h"
 
 
 
@@ -17,7 +16,7 @@ namespace MBus
 		/* nothing */
 	}
 
-	int DlmsMeter::loop()
+	int DlmsMeter::processData()
 	{
 
 		if(!this->receiveBuffer.empty())
@@ -102,90 +101,16 @@ namespace MBus
 				}
 				first = false;
 
-				uint8_t uint8Value;
-				uint16_t uint16Value;
-				uint32_t uint32Value;
-				float floatValue;
-
 				switch(dataType)
 				{
-					case DataType::DoubleLongUnsigned:
-					{
-						dataLength = 4;
-						memcpy(&uint32Value, &plaintext[currentPosition], 4); // Copy bytes to integer
-						uint32Value = swap_uint32(uint32Value); // Swap bytes
-						floatValue = uint32Value; // Ignore decimal digits for now
-
-
-						printf("\t\"%s\": %f", decodeSettings[index].strOut, floatValue);
-						break;
-					}
-
-
-					case DataType::LongUnsigned:
-					{
-						dataLength = 2;
-
-						memcpy(&uint16Value, &plaintext[currentPosition], 2); // Copy bytes to integer
-						uint16Value = swap_uint16(uint16Value); // Swap bytes
-
-						if(plaintext[currentPosition + 5] == Accuracy::SingleDigit)
-							floatValue = uint16Value / 10.0; // Divide by 10 to get decimal places
-						else if(plaintext[currentPosition + 5] == Accuracy::DoubleDigit)
-							floatValue = uint16Value / 100.0; // Divide by 100 to get decimal places
-						else
-							floatValue = uint16Value; // No decimal places
-
-
-						printf("\t\"%s\": %f", decodeSettings[index].strOut, floatValue);
-
-						break;
-					}
-
-					case DataType::OctetString:
-					{
-						dataLength = plaintext[currentPosition];
-						currentPosition++; // Advance past string length
-
-						char timestamp[21]; // 0000-00-00T00:00:00Z
-
-						uint16_t year;
-						uint8_t month;
-						uint8_t day;
-
-						uint8_t hour;
-						uint8_t minute;
-						uint8_t second;
-
-						memcpy(&uint16Value, &plaintext[currentPosition], 2);
-						year = swap_uint16(uint16Value);
-
-						memcpy(&month, &plaintext[currentPosition + 2], 1);
-						memcpy(&day, &plaintext[currentPosition + 3], 1);
-
-						memcpy(&hour, &plaintext[currentPosition + 5], 1);
-						memcpy(&minute, &plaintext[currentPosition + 6], 1);
-						memcpy(&second, &plaintext[currentPosition + 7], 1);
-
-						sprintf(timestamp, "%04u-%02u-%02uT%02u:%02u:%02uZ", year, month, day, hour, minute, second);
-
-						printf("\t\"%s\": \"%s\"", decodeSettings[index].strOut, timestamp);
-						break;
-					}
-					default:
-						{
-							printf("OBIS: Unsupported OBIS data type");
-							return -1;
-							break;
-						}
+					case DataType::DoubleLongUnsigned:	dataLength = printDoubleLong(&plaintext[currentPosition], index);  break;
+					case DataType::LongUnsigned: dataLength = printLong(&plaintext[currentPosition], index); break;
+					case DataType::OctetString: dataLength = printString(&plaintext[currentPosition], index); break;
+					default:	printf("OBIS: Unsupported OBIS data type"); return -1;
 				}
-
-				currentPosition += dataLength; // Skip data length
-
-				currentPosition += 2; // Skip break after data
-
+				currentPosition += dataLength; 	// Skip data length
+				currentPosition += 2; 			// Skip break after data
 			}
-
 
 			if(plaintext[currentPosition] == 0x0F) // There is still additional data for this type, skip it
 				currentPosition += 6; // Skip additional data and additional break; this will jump out of bounds on last frame
@@ -196,6 +121,95 @@ namespace MBus
 		printf("\r\n}");
 		return 0;
 	}
+
+
+	int DlmsMeter::printDoubleLong(uint8_t* plaintext, uint8_t index)
+	{
+		uint32_t uint32Value;
+		float floatValue;
+
+		memcpy(&uint32Value, plaintext, 4); // Copy bytes to integer
+		uint32Value = swap_uint32(uint32Value); // Swap bytes
+		floatValue = uint32Value; // Ignore decimal digits for now
+
+		printf("\t\"%s\": %f", decodeSettings[index].strOut, floatValue);
+
+		return 4;
+	}
+
+	int DlmsMeter::printLong(uint8_t* plaintext, uint8_t index)
+	{
+		uint16_t uint16Value;
+		float floatValue;
+
+		memcpy(&uint16Value, plaintext, 2); // Copy bytes to integer
+		uint16Value = swap_uint16(uint16Value); // Swap bytes
+
+		if(plaintext[5] == Accuracy::SingleDigit)
+			floatValue = uint16Value / 10.0; // Divide by 10 to get decimal places
+		else if(plaintext[5] == Accuracy::DoubleDigit)
+			floatValue = uint16Value / 100.0; // Divide by 100 to get decimal places
+		else
+			floatValue = uint16Value; // No decimal places
+
+
+		printf("\t\"%s\": %f", decodeSettings[index].strOut, floatValue);
+		return 2;
+	}
+
+
+	int DlmsMeter::printString(uint8_t* plaintext, uint8_t index)
+	{
+		int dataLength = 0;
+		uint16_t uint16Value;
+		if (decodeSettings[index].pType == printType::ptTime)
+		{
+			dataLength = plaintext[0];
+			plaintext++; // Advance past string length
+
+			char timestamp[21]; // 0000-00-00T00:00:00Z
+
+			uint16_t year;
+			uint8_t month;
+			uint8_t day;
+
+			uint8_t hour;
+			uint8_t minute;
+			uint8_t second;
+
+			memcpy(&uint16Value, plaintext, 2);
+			plaintext += 2;
+			year = swap_uint16(uint16Value);
+
+			memcpy(&month, plaintext, 1);
+			plaintext++;
+			memcpy(&day, plaintext, 1);
+			plaintext++;
+
+			memcpy(&hour, plaintext, 1);
+			plaintext++;
+			memcpy(&minute, plaintext, 1);
+			plaintext++;
+			memcpy(&second, plaintext, 1);
+			plaintext++;
+
+			sprintf(timestamp, "%04u-%02u-%02uT%02u:%02u:%02uZ", year, month, day, hour, minute, second);
+			printf("\t\"%s\": \"%s\"", decodeSettings[index].strOut, timestamp);
+
+		}
+		else
+		{
+			dataLength = plaintext[0];
+			plaintext++;
+			char text[100] = {0};
+			memcpy(text, plaintext, dataLength);
+			printf("\t\"%s\": \"%s\"", decodeSettings[index].strOut, text);
+
+		}
+		return dataLength + 1;
+	}
+
+
 
 	int DlmsMeter::getMBusPayload(std::vector<uint8_t> & mbusPayload)
 	{
@@ -329,7 +343,7 @@ namespace MBus
 	{
 		for (uint16_t i = 0U; i < DECODE_TAB_LEN; i++)
 		{
-			if(memcmp(&code[0], &decodeSettings[i].obisCode, OBISCODE_SIZE) == 0)
+			if(memcmp(&code[0], &decodeSettings[i].obisCode, OBIS_CODE_LEN) == 0)
 			{
 				return i;
 			}
