@@ -1,4 +1,11 @@
 # smartMeterMBUS
+The application convertes a MBUS data package to a JSON output. 
+Call: Converter <MBUSData> <KEY>
+
+The code and the key are given as ASCII string in HEX notation. Bellow see the example.
+
+With that app a MBUS package of Austrian energy providers can be decoded. Testet with a Salzburg AG payload.
+
 
 ## Needed Libs
 sudo apt install libmbedtls-dev
