@@ -1,6 +1,6 @@
 # smartMeterMBUS
 The application convertes a MBUS data package to a JSON output. 
-Call: Converter <MBUSData> <KEY>
+Call: Converter MBUSData KEY
 
 The code and the key are given as ASCII string in HEX notation. Bellow see the example.
 
