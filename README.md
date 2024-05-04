@@ -62,5 +62,12 @@ You get on stdout:
 "BytesRead": 376
 ```
 
+## Add a service to debian systems
+- copy file smartMeter.service to /usr/lib/systemd/system/
+- adapt names in file
+
+## Example Python script
+- An example python script is places in the project repository-folder ./python
+- Also a systemd example is included in the folder to call the script at bootup
 
 
