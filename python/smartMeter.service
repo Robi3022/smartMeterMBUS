@@ -1,0 +1,12 @@
+[Unit]
+Description=SmartMeterService
+After=network.target
+
+[Service]
+Type=idle
+Restart=on-failure
+User=robert
+ExecStart=/bin/bash -c 'cd /Location of your python script/ && /usr/bin/python3 /Location of your python script/read.py'
+
+[Install]
+WantedBy=multi-user.target

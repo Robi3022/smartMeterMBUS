@@ -6,9 +6,10 @@ import sys
 import string
 
 
-## Entschlüsselungseinstellungen
-evn_schluessel = "755a4e673239576179716753766b4f62"
+evn_schluessel = "Place Her Your EVN Key in Hex   "
 evn_schluessel = evn_schluessel.upper()
+
+
 
 os.system("pkill -x stty")
 os.system("pkill -x cat")
@@ -33,7 +34,7 @@ while 1:
 	i= i+1
 	daten = ''.join(format(x, '02X') for x in out)
 
-	out = subprocess.Popen("./Converter " + daten + " " + evn_schluessel, stdout=subprocess.PIPE, shell=True)
+	out = subprocess.Popen("../Converter " + daten + " " + evn_schluessel, stdout=subprocess.PIPE, shell=True)
 	while out.poll() is None:
     		time.sleep(0.1)
 
